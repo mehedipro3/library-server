@@ -29,17 +29,22 @@ async function run() {
 
     // Declare collections
     const booksCollection = client.db('book-category').collection('books');
+   
 
-    // GET all books
-    app.get("/books", async (req, res) => {
-      try {
-        const books = await booksCollection.find().toArray();
-        res.send(books);
-      } catch (err) {
-        console.error("Error fetching books:", err);
-        res.status(500).send({ error: "Failed to fetch books" });
+    // GET books with optional category filter
+    app.get('/books',  async(req, res)=> {
+      const category = req.query.category;
+      let query = {};
+      if(category){
+        query = { category : category}
       }
-    });
+      const cursor = booksCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    
+
 
     // Test route
     app.get('/', (req, res) => {
