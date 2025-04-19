@@ -79,19 +79,21 @@ async function run() {
 
     app.get('/bookBorrowed', async (req, res) => {
       const email = req.query.email;
-      let query = {};
-      if (email) {
-        query = { userEmail: email }
+    
+      if (!email) {
+        return res.status(400).send({ message: "Email is required" });
       }
-
-      // if (req.user.email !== req.query.email  ) {
-      //   return req.status(403).send({ massage: "Forbidden Access" });
-      // }
-
-      const cursor = borrowCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    })
+    
+      try {
+        const query = { userEmail: email };
+        const result = await borrowCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error('Error fetching borrowed books:', error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+    
 
     app.post('/borrow/:id', async (req, res) => {
       const id = req.params.id;
@@ -111,6 +113,33 @@ async function run() {
       const result = await borrowCollection.insertOne(borrowBookDetails);
       res.send(result)
     })
+
+    app.delete('/bookBorrowed/:id', async (req, res) => {
+      const id = req.params.id;
+    
+      try {
+        // Optional: Update book quantity +1 when returned
+        await booksCollection.updateOne(
+          { _id: new ObjectId(req.body.bookId) },
+          { $inc: { quantity: 1 } }
+        );
+    
+        const query = { _id: new ObjectId(id) };
+        const result = await borrowCollection.deleteOne(query);
+    
+        if (result.deletedCount === 1) {
+          res.send({ message: "Book returned successfully" });
+        } else {
+          res.status(404).send({ message: "Borrow record not found" });
+        }
+    
+      } catch (error) {
+        console.error("Delete Error:", error);
+        res.status(500).send({ message: "Server Error" });
+      }
+    });
+    
+
 
     // Test route
     app.get('/', (req, res) => {
